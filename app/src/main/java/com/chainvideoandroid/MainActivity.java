@@ -30,8 +30,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String MODEL_PATH = "mobilenet_v1_1.0_224.tflite";
-    private static final String LABEL_PATH = "labels_mobilenet_quant_v1_224.txt";
     private static MainActivity instance;
     VideoView vid;
     MediaController m;
@@ -163,31 +161,13 @@ public class MainActivity extends AppCompatActivity {
         server.stop();
     }
 
-    public void recognize_image(String filename, AssetManager am){
-        InputStream is=null;
-        try {
-            is = am.open(filename);
-            Bitmap bMap = BitmapFactory.decodeStream(is);
-            // use the input stream as you want
-            TextView t = (TextView)findViewById(R.id.display_1);
-            try {
-                test_Classifier = Classifier.loadClassifier(getAssets(), MODEL_PATH);
-                test_Classifier.loadLabelList(getAssets(), LABEL_PATH);
-                t.setText(test_Classifier.recognizeImage(bMap));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void recognize_image2(Bitmap bMap){
         // use the input stream as you want
             TextView t = (TextView)findViewById(R.id.display_1);
             try {
-                test_Classifier = Classifier.loadClassifier(getAssets(), MODEL_PATH);
-                test_Classifier.loadLabelList(getAssets(), LABEL_PATH);
+                test_Classifier = Classifier.loadClassifier();
+                test_Classifier.loadLabelList();
                 t.setText(test_Classifier.recognizeImage(bMap));
                 chainMLClient client = new  chainMLClient("192.168.1.69", 50051);
                 client.uploadFile("d","image",bMap);
@@ -200,8 +180,8 @@ public class MainActivity extends AppCompatActivity {
     public void recognize_image3(ByteArrayOutputStream bMapArray, String nextDevice){
         TextView t = (TextView)findViewById(R.id.display_1);
         try {
-            test_Classifier = Classifier.loadClassifier(getAssets(), MODEL_PATH);
-            test_Classifier.loadLabelList(getAssets(), LABEL_PATH);
+            test_Classifier = Classifier.loadClassifier();
+            test_Classifier.loadLabelList();
             byte[] bitmapdata = bMapArray.toByteArray();
             Bitmap bMap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
             t.setText(test_Classifier.recognizeImage(bMap));

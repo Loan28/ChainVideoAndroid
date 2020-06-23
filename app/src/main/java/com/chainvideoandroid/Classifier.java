@@ -30,6 +30,7 @@ public class Classifier {
         this.interpreter = interpreter;
     }
     private static final int RESULTS_TO_SHOW = 1;
+
     private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
             new PriorityQueue<>(
                     RESULTS_TO_SHOW,
@@ -39,21 +40,15 @@ public class Classifier {
                             return (o1.getValue()).compareTo(o2.getValue());
                         }
                     });
-    public static Classifier loadClassifier(AssetManager assetManager, String modelPath) throws IOException {
-        ByteBuffer byteBuffer = loadModelFile(assetManager, modelPath);
+
+
+    public static Classifier loadClassifier() throws IOException {
         File modelFile =  new File( MainActivity.getInstance().getCacheDir(), "model.tflite");
         Interpreter interpreter = new Interpreter(modelFile);
         return new Classifier(interpreter);
     }
-    private static ByteBuffer loadModelFile(AssetManager assetManager, String modelPath) throws IOException {
-        AssetFileDescriptor fileDescriptor = assetManager.openFd(modelPath);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
-    }
-    public void loadLabelList(AssetManager assetManager, String labelPath) throws IOException {
+
+    public void loadLabelList() throws IOException {
         String line;
         File labelFile =  new File( MainActivity.getInstance().getCacheDir(), "label.txt");
         FileInputStream fileInputStream = new FileInputStream(labelFile);
@@ -64,6 +59,7 @@ public class Classifier {
         labelProbArray = new float[1][labelList.size()];
         reader.close();
     }
+
     public String recognizeImage(Bitmap bitmap) {
         int batchNum = 0;
         Bitmap resized = Bitmap.createScaledBitmap(bitmap, 224, 224, true);
@@ -83,6 +79,7 @@ public class Classifier {
         String textToShow = printTopKLabels();
         return textToShow;
     }
+
     private String printTopKLabels() {
         for (int i = 0; i < labelList.size(); ++i) {
             sortedLabels.add(
