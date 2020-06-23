@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package chainML;
+
+option java_package = "com.chainML.pb";
+option java_multiple_files = true;
+
+message UploadFileRequest {
+  oneof data {
+    ImageInfo info = 1;
+    bytes chunk_data = 2;
+  };
+  TypeFile type_file = 3;
+}
+message UploadFileResponse {
+  string id = 1;
+  uint32 size = 2;
+}
+
+message DataChunk {
+  bytes data = 1;
+  int32 size = 2;
+}
+
+message ImageInfo {
+  string image_type = 2;
+}
+
+message Model{
+  string modelName = 1;
+}
+
+message TypeFile{
+  string typefile = 1;
+}
+
+
+message Order {
+  string nextDevice = 2;
+}
+
+message replyOrder {
+  string reply = 1;
+}
+// The request message containing the user's name.
+message OrderRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message OrderReply {
+  string message = 1;
+}
+
+service chainMLService {
+  rpc DefineOrder (OrderRequest) returns (OrderReply) {}
+  rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse) {};
+}
