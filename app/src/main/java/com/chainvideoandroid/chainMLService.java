@@ -6,26 +6,18 @@ import com.google.protobuf.ByteString;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
-import android.content.Context;
-import android.content.Intent;
-import android.content.res.AssetManager;
-
 import java.io.*;
 import java.util.logging.Logger;
 
 public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
 
     private static final Logger logger = Logger.getLogger(chainMLService.class.getName());
-    private ImageStore imageStore;
-    private String imageID = "";
-    private Context context;
-    public chainMLService(ImageStore imageStore) {
-        this.imageStore = imageStore;
+    private FileStore fileStore;
+
+    public chainMLService(FileStore fileStore) {
+        this.fileStore = fileStore;
     }
 
-    public String get_image_id(){
-        return imageID;
-    }
     String nextDevice;
 
     @Override
@@ -40,9 +32,8 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
     @Override
     public StreamObserver<UploadFileRequest> uploadFile(final StreamObserver<UploadFileResponse> responseObserver) {
         return new StreamObserver<UploadFileRequest>() {
-            private String laptopID;
-            private String imageType;
-            private ByteArrayOutputStream imageData;
+            private String fileType;
+            private ByteArrayOutputStream fileData;
             private TypeFile type_file;
 
             @Override
@@ -51,14 +42,14 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
                     ImageInfo info = request.getInfo();
                     type_file = request.getTypeFile();
                     logger.info("receive " + type_file.getTypefile() + " info" + info);
-                    imageType = info.getImageType();
-                    imageData = new ByteArrayOutputStream();
+                    fileType = info.getImageType();
+                    fileData = new ByteArrayOutputStream();
                     return;
 
                 }
                 ByteString chunkData = request.getChunkData();
                 logger.info("receive " + type_file.getTypefile() + " chunk with size: " + chunkData.size());
-                if (imageData == null) {
+                if (fileData == null) {
                     logger.info( type_file.getTypefile()+ " info was not sent before");
                     responseObserver.onError(
                             Status.INVALID_ARGUMENT
@@ -68,7 +59,7 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
                     return;
                 }
                 try {
-                    chunkData.writeTo(imageData);
+                    chunkData.writeTo(fileData);
                 } catch (IOException e) {
                     responseObserver.onError(
                             Status.INTERNAL
@@ -87,19 +78,19 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
 
             @Override
             public void onCompleted() {
-                String imageID = "";
-                int imageSize = imageData.size();
+                String fileID = "";
+                int imageSize = fileData.size();
 
                 try {
                     if(type_file.getTypefile().equals("image")) {
-                        imageID = imageStore.Save(imageType, imageData, "image");
-                        MainActivity.getInstance().recognize_image3(imageData, nextDevice);
+                        fileID = fileStore.Save(fileType, fileData, "image");
+                        MainActivity.getInstance().recognize_image3(fileData, nextDevice);
                     } else if (type_file.getTypefile().equals("model")) {
-                        imageID = imageStore.Save(imageType, imageData, "model");
+                        fileID = fileStore.Save(fileType, fileData, "model");
                     }
                     else
                     {
-                        imageID = imageStore.Save(imageType, imageData, "label");
+                        fileID = fileStore.Save(fileType, fileData, "label");
                     }
 
                 } catch (IOException e) {
@@ -111,7 +102,7 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
                 }
 
                 UploadFileResponse response = UploadFileResponse.newBuilder()
-                        .setId(imageID)
+                        .setId(fileID)
                         .setSize(imageSize)
                         .build();
                 responseObserver.onNext(response);

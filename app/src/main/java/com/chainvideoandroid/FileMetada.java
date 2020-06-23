@@ -1,10 +1,10 @@
 package com.chainvideoandroid;
 
-public class ImageMetada {
+public class FileMetada {
     private String type;
     private String path;
 
-    public ImageMetada(String type, String path){
+    public FileMetada(String type, String path){
         this.type = type;
         this.path = path;
 

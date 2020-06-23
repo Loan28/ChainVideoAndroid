@@ -1,5 +1,4 @@
 package com.chainvideoandroid;
-import android.content.Intent;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -16,11 +15,11 @@ public class chainServer {
     private final Server server;
 
 
-    public chainServer(int port, ImageStore imageStore) {
+    public chainServer(int port, FileStore imageStore) {
         this(NettyServerBuilder.forPort(port), port, imageStore);
     }
 
-    public chainServer(ServerBuilder serverBuilder, int port, ImageStore imageStore){
+    public chainServer(ServerBuilder serverBuilder, int port, FileStore imageStore){
         this.port = port;
         chainMLService Services = new chainMLService(imageStore);
         server = serverBuilder.addService(Services).build();
@@ -57,7 +56,7 @@ public class chainServer {
 
 
     public static void main(String args) throws InterruptedException, IOException {
-        DiskImageStore imageStore = new DiskImageStore("img");
+        DiskFileStore imageStore = new DiskFileStore("img");
         chainServer server = new chainServer(50051, imageStore);
         server.start();
 

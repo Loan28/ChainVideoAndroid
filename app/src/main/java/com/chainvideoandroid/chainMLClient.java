@@ -51,76 +51,7 @@ public class chainMLClient {
 
 
     //Function to upload file to the server, arg: file path
-    public void uploadImage(String imagePath, AssetManager am) throws InterruptedException {
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-
-        StreamObserver<UploadFileRequest> requestObserver = asyncStub.withDeadlineAfter(5, TimeUnit.SECONDS)
-                .uploadFile(new StreamObserver<UploadFileResponse>() {
-                    @Override
-                    public void onNext(UploadFileResponse response) {
-
-                        logger.info("receive response: " + response);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        logger.log(Level.SEVERE, "upload failed: " + t);
-                        finishLatch.countDown();
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        logger.info("image uploaded");
-                        finishLatch.countDown();
-                    }
-                });
-
-
-        InputStream fileInputStream = null;
-        try {
-            fileInputStream = am.open("goose.jpg");
-        } catch (FileNotFoundException e) {
-            logger.log(Level.SEVERE, "cannot read image file " + e.getMessage());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        String imageType = imagePath.substring(imagePath.lastIndexOf("."));
-        ImageInfo info = ImageInfo.newBuilder().setImageType(imageType).build();
-        UploadFileRequest request = UploadFileRequest.newBuilder().setInfo(info).build();
-
-        try {
-            requestObserver.onNext(request);
-            logger.info("sent image info" + info);
-
-            byte[] buffer = new byte[1024];
-            while (true) {
-                int n = fileInputStream.read(buffer);
-                if (n <= 0) {
-                    break;
-                }
-
-                if (finishLatch.getCount() == 0) {
-                    return;
-                }
-                request = UploadFileRequest.newBuilder()
-                        .setChunkData(ByteString.copyFrom(buffer, 0, n))
-                        .build();
-                requestObserver.onNext(request);
-                logger.info("sent image chunk with size: " + n);
-            }
-        }catch (Exception e){
-            logger.log(Level.SEVERE, "unexcepted error: " + e.getMessage());
-            requestObserver.onError(e);
-            return;
-        }
-        requestObserver.onCompleted();
-        if (!finishLatch.await(1, TimeUnit.MINUTES)){
-            logger.warning("request cannot finish within 1 minute");
-        }
-    }
-
-    public void uploadFile(String imagePath, String type, Bitmap bmap) throws InterruptedException {
+    public void uploadFile(String type, Bitmap bmap) throws InterruptedException {
         final CountDownLatch finishLatch = new CountDownLatch(1);
 
         StreamObserver<UploadFileRequest> requestObserver = asyncStub.uploadFile(new StreamObserver<UploadFileResponse>() {
@@ -138,12 +69,11 @@ public class chainMLClient {
 
             @Override
             public void onCompleted() {
-                logger.info("image uploaded");
+                logger.info("file uploaded");
                 finishLatch.countDown();
             }
         });
 
-        FileInputStream fileInputStream = null;
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         bmap.compress(Bitmap.CompressFormat.PNG, 0 /*ignored for PNG*/, bos);
         byte[] bitmapdata = bos.toByteArray();
@@ -156,10 +86,9 @@ public class chainMLClient {
 
         try {
             requestObserver.onNext(request);
-            logger.info("sent image info" + info);
+            logger.info("sent file info" + info);
 
             byte[] buffer = new byte[1024];
-            //fileInputStream.getChannel().size();
             while (true) {
                 int n = bs.read(buffer);
                 if (n <= 0) {
@@ -173,7 +102,7 @@ public class chainMLClient {
                         .setChunkData(ByteString.copyFrom(buffer, 0, n))
                         .build();
                 requestObserver.onNext(request);
-                logger.info("sent image chunk with size: " + n);
+                logger.info("sent file chunk with size: " + n);
             }
         }catch (Exception e){
             logger.log(Level.SEVERE, "unexcepted error: " + e.getMessage());
