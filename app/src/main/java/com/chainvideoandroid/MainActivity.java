@@ -20,9 +20,16 @@ import android.widget.VideoView;
 import android.view.ViewGroup.LayoutParams;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.Frame;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.Java2DFrameConverter;
+import org.bytedeco.opencv.opencv_core.IplImage;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity {
     private static MainActivity instance;
@@ -63,7 +70,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    play_video();
+                    try {
+                        play_video();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         });
@@ -104,9 +115,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public void play_video() {
-        i = 0;
-        String path = "android.resource://" + getPackageName() + "/" + R.raw.cup_keyboard_mouse;
+    public void play_video() throws IOException {
+     /*   i = 0;
         m = new MediaController(this);
         m.setAnchorView(vid);
 
@@ -128,6 +138,23 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }, delay);
+*/
+        String path = "android.resource://" + getPackageName() + "/" + R.raw.cup_keyboard_mouse;
+        FFmpegFrameGrabber g = new FFmpegFrameGrabber(path);
+        Java2DFrameConverter c = new Java2DFrameConverter();
+        g.start();
+        Frame frame;
+        while ((frame = g.grabImage()) != null) {
+            if(frame.keyFrame) {
+
+                ByteBuffer buf = frame.data;
+                byte[] imageBytes = new byte[buf.remaining()];
+                buf.get(imageBytes);
+                final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+                recognize_image2(bmp);
+            }
+        }
+        g.stop();
     }
 
     public void start_server(){
@@ -136,7 +163,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     public void stop_server() throws InterruptedException {
@@ -150,10 +176,10 @@ public class MainActivity extends AppCompatActivity {
                 test_Classifier = Classifier.loadClassifier();
                 test_Classifier.loadLabelList();
                 t.setText(test_Classifier.recognizeImage(bMap));
-                chainMLClient client = new  chainMLClient("192.168.1.69", 50051);
-                client.uploadFile("image",bMap);
-                client.shutdown();
-            } catch (IOException | InterruptedException e) {
+                //chainMLClient client = new  chainMLClient("192.168.1.69", 50051);
+                //client.uploadFile("image",bMap);
+                //client.shutdown();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
     }
@@ -167,23 +193,14 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bMap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
             t.setText(test_Classifier.recognizeImage(bMap));
 
-            if(nextDevice.equals("Linux")){
-                chainMLClient client = new chainMLClient("192.168.1.73", 50051);
-                client.uploadFile("image",bMap);
-                client.shutdown();
-            } else if(nextDevice.equals("RPI"))
-            {
-                chainMLClient client = new chainMLClient("192.168.1.75", 50051);
-                client.uploadFile("image",bMap);
-                client.shutdown();
-            }
-            else if(nextDevice.equals("end"))
+            if(nextDevice.equals("end"))
             {
                 System.out.println("end");
             }
             else{
-                System.out.println("unknown device");
-            }
+                chainMLClient client = new chainMLClient(nextDevice, 50051);
+                client.uploadFile("image",bMap);
+                client.shutdown();            }
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();

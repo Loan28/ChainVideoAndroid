@@ -7,8 +7,6 @@ import com.chainML.pb.ImageInfo;
 import com.chainML.pb.TypeFile;
 import com.chainML.pb.UploadFileRequest;
 import com.chainML.pb.UploadFileResponse;
-import com.chainML.pb.UploadImageRequest;
-import com.chainML.pb.UploadImageResponse;
 import com.chainML.pb.chainMLServiceGrpc;
 import com.chainML.pb.chainMLServiceGrpc.chainMLServiceBlockingStub;
 import com.google.protobuf.ByteString;
