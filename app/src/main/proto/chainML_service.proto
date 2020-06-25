@@ -7,10 +7,12 @@ option java_multiple_files = true;
 
 message UploadFileRequest {
   oneof data {
-    ImageInfo info = 1;
+    FileInfo info = 1;
     bytes chunk_data = 2;
   };
   TypeFile type_file = 3;
+  FileName file_name = 4;
+
 }
 message UploadFileResponse {
   string id = 1;
@@ -22,10 +24,13 @@ message DataChunk {
   int32 size = 2;
 }
 
-message ImageInfo {
+message FileInfo {
   string image_type = 2;
 }
 
+message  FileName{
+  string filename = 1;
+}
 message Model{
   string modelName = 1;
 }
@@ -54,5 +59,6 @@ message OrderReply {
 
 service chainMLService {
   rpc DefineOrder (OrderRequest) returns (OrderReply) {}
+  rpc getSpecs (OrderRequest) returns (OrderReply) {}
   rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse) {};
 }

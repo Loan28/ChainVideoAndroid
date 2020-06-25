@@ -35,15 +35,17 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
             private String fileType;
             private ByteArrayOutputStream fileData;
             private TypeFile type_file;
-
+            private FileName file_name;
             @Override
             public void onNext(UploadFileRequest request) {
                 if(request.getDataCase() == UploadFileRequest.DataCase.INFO) {
-                    ImageInfo info = request.getInfo();
+                    FileInfo info = request.getInfo();
                     type_file = request.getTypeFile();
                     logger.info("receive " + type_file.getTypefile() + " info" + info);
                     fileType = info.getImageType();
                     fileData = new ByteArrayOutputStream();
+                    file_name = request.getFileName();
+
                     return;
 
                 }
@@ -87,6 +89,10 @@ public class chainMLService extends chainMLServiceGrpc.chainMLServiceImplBase {
                         MainActivity.getInstance().recognize_image3(fileData, nextDevice);
                     } else if (type_file.getTypefile().equals("model")) {
                         fileID = fileStore.Save(fileType, fileData, "model");
+                    }
+                    else if (type_file.getTypefile().equals("video")){
+                        fileID = fileStore.Save(fileType, fileData, "video");
+                        MainActivity.getInstance().play_video();
                     }
                     else
                     {

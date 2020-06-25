@@ -3,6 +3,8 @@ package com.chainvideoandroid;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 
+import com.chainML.pb.FileInfo;
+import com.chainML.pb.FileName;
 import com.chainML.pb.ImageInfo;
 import com.chainML.pb.TypeFile;
 import com.chainML.pb.UploadFileRequest;
@@ -78,9 +80,12 @@ public class chainMLClient {
         ByteArrayInputStream bs = new ByteArrayInputStream(bitmapdata);
 
         String imageType = ".png";
-        ImageInfo info = ImageInfo.newBuilder().setImageType(imageType).build();
+        String imageName = "test";
+
+        FileInfo info = FileInfo.newBuilder().setImageType(imageType).build();
         TypeFile typeFile = TypeFile.newBuilder().setTypefile(type).build();
-        UploadFileRequest request = UploadFileRequest.newBuilder().setInfo(info).setTypeFile(typeFile).build();
+        FileName fileName = FileName.newBuilder().setFilename(imageName).build();
+        UploadFileRequest request = UploadFileRequest.newBuilder().setInfo(info).setFileName(fileName).setTypeFile(typeFile).build();
 
         try {
             requestObserver.onNext(request);

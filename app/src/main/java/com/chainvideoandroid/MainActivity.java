@@ -20,6 +20,9 @@ import android.widget.VideoView;
 import android.view.ViewGroup.LayoutParams;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
+import org.bytedeco.javacpp.Loader;
+import org.bytedeco.javacv.AndroidFrameConverter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
@@ -29,6 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity {
@@ -57,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         instance = this;
         vid = (VideoView)findViewById(R.id.videoView);
         mediaMetadataRetriever = new MediaMetadataRetriever();
-
+        final AssetManager am = this.getAssets();
         button.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
             @Override
@@ -84,77 +88,24 @@ public class MainActivity extends AppCompatActivity {
         return instance;
     }
 
-    public void take_frame(){
-        i++;
-
-        int currentPosition = vid.getCurrentPosition(); //in millisecond
-        Toast.makeText(MainActivity.this,
-                "Current Position: " + currentPosition + " (ms)",
-                Toast.LENGTH_LONG).show();
-
-        Bitmap bmFrame = mediaMetadataRetriever
-                .getFrameAtTime(currentPosition * 1000); //unit in microsecond
-
-        if(bmFrame == null){
-            Toast.makeText(MainActivity.this,
-                    "bmFrame == null!",
-                    Toast.LENGTH_LONG).show();
-        }else{
-            AlertDialog.Builder myCaptureDialog =
-                    new AlertDialog.Builder(MainActivity.this);
-            ImageView capturedImageView = new ImageView(MainActivity.this);
-            capturedImageView.setImageBitmap(bmFrame);
-            LayoutParams capturedImageViewLayoutParams =
-                    new LayoutParams(LayoutParams.WRAP_CONTENT,
-                            LayoutParams.WRAP_CONTENT);
-            capturedImageView.setLayoutParams(capturedImageViewLayoutParams);
-
-            myCaptureDialog.setView(capturedImageView);
-            recognize_image2(bmFrame);
-        }
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void play_video() throws IOException {
-     /*   i = 0;
-        m = new MediaController(this);
-        m.setAnchorView(vid);
 
-        Uri u = Uri.parse(path);
-        mediaMetadataRetriever.setDataSource(this, u);
-
-        vid.setMediaController(m);
-        vid.setVideoURI(u);
-        vid.requestFocus();
-        vid.start();
-        handler.postDelayed(new Runnable(){
-                public void run(){
-                    if(i < 5 ){
-                        take_frame();
-                        handler.postDelayed(this, delay);
-                    }
-                    else{
-                        handler.removeCallbacks(this);
-                    }
-                }
-            }, delay);
-*/
-        String path = "android.resource://" + getPackageName() + "/" + R.raw.cup_keyboard_mouse;
+        File file =  new File(MainActivity.getInstance().getCacheDir(), "video.mp4");
+        String path = file.getAbsolutePath();
         FFmpegFrameGrabber g = new FFmpegFrameGrabber(path);
-        Java2DFrameConverter c = new Java2DFrameConverter();
+        AndroidFrameConverter a = new AndroidFrameConverter();
+
         g.start();
         Frame frame;
         while ((frame = g.grabImage()) != null) {
             if(frame.keyFrame) {
-
-                ByteBuffer buf = frame.data;
-                byte[] imageBytes = new byte[buf.remaining()];
-                buf.get(imageBytes);
-                final Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+                final Bitmap bmp = a.convert(frame);
                 recognize_image2(bmp);
             }
         }
         g.stop();
+
     }
 
     public void start_server(){
