@@ -12,7 +12,6 @@ message UploadFileRequest {
   };
   TypeFile type_file = 3;
   FileName file_name = 4;
-
 }
 message UploadFileResponse {
   string id = 1;
@@ -28,9 +27,6 @@ message FileInfo {
   string image_type = 2;
 }
 
-message  FileName{
-  string filename = 1;
-}
 message Model{
   string modelName = 1;
 }
@@ -39,6 +35,9 @@ message TypeFile{
   string typefile = 1;
 }
 
+message  FileName{
+  string filename = 1;
+}
 
 message Order {
   string nextDevice = 2;
@@ -47,18 +46,48 @@ message Order {
 message replyOrder {
   string reply = 1;
 }
-// The request message containing the user's name.
+
 message OrderRequest {
   string name = 1;
 }
-
-// The response message containing the greetings
 message OrderReply {
   string message = 1;
 }
+message DefineControllerRequest {
+  string ipController = 1;
+  int32 portController = 2;
+}
+message DefineModelLabelRequest {
+  string model = 1;
+  string label = 2;
+  string type = 3;
+  string condition = 4;
+  string condition2 = 5;
+  string action = 6;
+  string action2 = 7;
+  string applicationType = 8;
+}
+message DefineModelLabelReply {
+  string message = 1;
+}
+message DefineControllerReply {
+  string message = 1;
+}
 
+message TimeRequest {
+  double time = 1;
+  string device = 2;
+
+}
+message TimeReply {
+  string name = 1;
+}
 service chainMLService {
+  rpc sendUploadTime (TimeRequest) returns (TimeReply) {}
+  rpc sendExecTime (TimeRequest) returns (TimeReply) {}
   rpc DefineOrder (OrderRequest) returns (OrderReply) {}
+  rpc DefineModelLabel (DefineModelLabelRequest) returns (DefineModelLabelReply){}
+  rpc DefineController (DefineControllerRequest) returns (DefineControllerReply) {}
   rpc getSpecs (OrderRequest) returns (OrderReply) {}
   rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse) {};
 }

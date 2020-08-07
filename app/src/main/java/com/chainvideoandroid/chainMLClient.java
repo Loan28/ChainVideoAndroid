@@ -6,6 +6,10 @@ import android.graphics.Bitmap;
 import com.chainML.pb.FileInfo;
 import com.chainML.pb.FileName;
 import com.chainML.pb.ImageInfo;
+import com.chainML.pb.OrderReply;
+import com.chainML.pb.OrderRequest;
+import com.chainML.pb.TimeReply;
+import com.chainML.pb.TimeRequest;
 import com.chainML.pb.TypeFile;
 import com.chainML.pb.UploadFileRequest;
 import com.chainML.pb.UploadFileResponse;
@@ -26,6 +30,7 @@ import java.util.logging.Logger;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 public class chainMLClient {
@@ -49,8 +54,47 @@ public class chainMLClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-
-    //Function to upload file to the server, arg: file path
+    //
+    //Receive which device is next in line
+    public void defineOrder(String name) {
+        OrderRequest request = OrderRequest.newBuilder().setName(name).build();
+        OrderReply response;
+        try {
+            response = blockingStub.defineOrder(request);
+            logger.info(response.getMessage());
+        } catch (StatusRuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+            return;
+        }
+    }
+    //
+    //Send upload time to the controller
+    public void sendUploadTime(double execTime, String device) {
+        TimeRequest request = TimeRequest.newBuilder().setTime(execTime).setDevice(device).build();
+        TimeReply response;
+        try {
+            response = blockingStub.sendUploadTime(request);
+            logger.info(response.getName());
+        } catch (StatusRuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+            return;
+        }
+    }
+    //
+    //Send execution time to the controller
+    public void sendExecTime(double execTime, String device) {
+        TimeRequest request = TimeRequest.newBuilder().setTime(execTime).setDevice(device).build();
+        TimeReply response;
+        try {
+            response = blockingStub.sendExecTime(request);
+            logger.info(response.getName());
+        } catch (StatusRuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+            return;
+        }
+    }
+    //
+    //Function to upload file to the server, arg: file path, type of file sent
     public void uploadFile(String type, Bitmap bmap) throws InterruptedException {
         final CountDownLatch finishLatch = new CountDownLatch(1);
 

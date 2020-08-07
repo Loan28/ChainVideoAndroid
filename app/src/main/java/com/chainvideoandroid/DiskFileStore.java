@@ -13,6 +13,8 @@ public class DiskFileStore implements FileStore {
         this.fileFolder = fileFolder;
         this.data = new ConcurrentHashMap<>(0);
     }
+    //
+    //Function to save file on a folder specified in the args
     @Override
     public String Save(String fileType, ByteArrayOutputStream fileData, String fileID) throws IOException {
 

@@ -34,17 +34,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
     private static MainActivity instance;
-    VideoView vid;
-    MediaController m;
-    MediaMetadataRetriever mediaMetadataRetriever;
-    ContextWrapper c = new ContextWrapper(this);
-    final Handler handler = new Handler();
-    final int delay = 500; //milliseconds
-    int i = 0;
-   // String destFolder = getCacheDir().getAbsolutePath();
+
     chainServer server;
 
 
@@ -56,11 +51,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button button= (Button)findViewById(R.id.button);
-        Button buttonPlay = (Button)findViewById(R.id.button2);
         TextView t = (TextView)findViewById(R.id.display_1);
         instance = this;
-        vid = (VideoView)findViewById(R.id.videoView);
-        mediaMetadataRetriever = new MediaMetadataRetriever();
         final AssetManager am = this.getAssets();
         button.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -69,29 +61,19 @@ public class MainActivity extends AppCompatActivity {
                 start_server();
             }
         });
-
-        buttonPlay.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    try {
-                        play_video();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
     }
+
+
     public static MainActivity getInstance() {
         return instance;
     }
 
+    //
+    //Function that splits the video input into frames
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public void play_video() throws IOException {
+    public void play_video(String filePath, String model, String label, String condition, String condition2, String action, String action2, String nextDevice, String ipController, int portController, String applicationType) throws IOException {
 
-        File file =  new File(MainActivity.getInstance().getCacheDir(), "video.mp4");
+        File file =  new File(MainActivity.getInstance().getCacheDir(), filePath);
         String path = file.getAbsolutePath();
         FFmpegFrameGrabber g = new FFmpegFrameGrabber(path);
         AndroidFrameConverter a = new AndroidFrameConverter();
@@ -99,13 +81,10 @@ public class MainActivity extends AppCompatActivity {
         g.start();
         Frame frame;
         while ((frame = g.grabImage()) != null) {
-            if(frame.keyFrame) {
-                final Bitmap bmp = a.convert(frame);
-                recognize_image2(bmp);
-            }
+            final Bitmap bmp = a.convert(frame);
+            process_image(bmp, nextDevice, model, label, condition, condition2, action, action2, ipController, portController, applicationType);
         }
         g.stop();
-
     }
 
     public void start_server(){
@@ -121,40 +100,102 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void recognize_image2(Bitmap bMap){
-            TextView t = (TextView)findViewById(R.id.display_1);
-            try {
-                test_Classifier = Classifier.loadClassifier();
-                test_Classifier.loadLabelList();
-                t.setText(test_Classifier.recognizeImage(bMap));
-                //chainMLClient client = new  chainMLClient("192.168.1.69", 50051);
-                //client.uploadFile("image",bMap);
-                //client.shutdown();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-    }
+    //
+    //Function that takes care of calling the functions to run the model on a frame, then sends the frame depending on the action to take sent by the controller
+    public void process_image(Bitmap bMap, String nextDevice, String model, String label, String condition, String condition2, String action, String action2, String ipController, int portController, String applicationType){
 
-    public void recognize_image3(ByteArrayOutputStream bMapArray, String nextDevice){
         TextView t = (TextView)findViewById(R.id.display_1);
+        Runtime runtime = Runtime.getRuntime();
         try {
-            test_Classifier = Classifier.loadClassifier();
-            test_Classifier.loadLabelList();
-            byte[] bitmapdata = bMapArray.toByteArray();
-            Bitmap bMap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
-            t.setText(test_Classifier.recognizeImage(bMap));
-
-            if(nextDevice.equals("end"))
-            {
-                System.out.println("end");
-            }
-            else{
+                test_Classifier = Classifier.loadClassifier(model);
+                test_Classifier.loadLabelList(label);
+                chainMLClient controller = new chainMLClient(ipController,portController);
+                 List<String> OutputList = null;
+                long startTime = System.nanoTime();
+                //
+                //If model is object segmentation then use function recognizeImage, if not use recognizeImage2
+                if(model.equals("deeplabv3_257.tflite")){
+                    OutputList = test_Classifier.recognizeImage(bMap);
+                }
+                else{
+                    OutputList.add(test_Classifier.recognizeImage2(bMap));
+                }
+                long endTime = System.nanoTime();
+                long memoryLeft = ((runtime.totalMemory() - runtime.freeMemory())/1048576);
+                long timeElapsed = endTime - startTime;
+                controller.sendExecTime(timeElapsed, "0000003");
+                controller.sendExecTime(memoryLeft, "0000003m");
+                controller.defineOrder(" Feedback from Android\nExecution time in milliseconds : " + String.valueOf(timeElapsed) + "\n" + "Memory available : " + memoryLeft + " Bytes. "  );
                 chainMLClient client = new chainMLClient(nextDevice, 50051);
-                client.uploadFile("image",bMap);
-                client.shutdown();            }
 
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+                    if (applicationType.equals("pipeline")) {
+                        boolean isInFrame = false;
+                        for (int j = 0; j < OutputList.size(); j++) {
+                            if (condition.equals(OutputList.get(j))) {
+                                isInFrame = true;
+                            }
+                        }
+                        if (isInFrame) {
+                            System.out.println("In the frame");
+                            if (!action.equals("drop"))  {
+                                long startTimeFileTransfer = System.nanoTime();
+                                chainMLClient client1 = new chainMLClient(action, 50051);
+                                client1.uploadFile("image",bMap);
+                                long endTimeFileTransfer = System.nanoTime();
+                                long timeElapsedFileTransfer = endTimeFileTransfer - startTimeFileTransfer;
+                                client1.shutdown();
+                                controller.sendUploadTime(timeElapsedFileTransfer/1000000, "0000003");
+                            }
+                        } else {
+                            client.shutdown();
+                            controller.shutdown();
+                        }
+                    } else {
+                        boolean isCondition1 = false;
+                        boolean isCondition2 = false;
+                        for (int j = 0; j < OutputList.size(); j++) {
+                            if (condition.equals(OutputList.get(j))) {
+                                isCondition1 = true;
+                            }
+                            if (condition2.equals(OutputList.get(j))) {
+                                isCondition2 = true;
+                            }
+                        }
+                        if (isCondition1) {
+                            System.out.println(condition + " in the frame");
+                            if (!action.equals("drop")) {
+                                chainMLClient client1 = new chainMLClient(action, 50051);
+                                long startTimeFileTransfer = System.nanoTime();
+                                client1.uploadFile("image",bMap);
+                                long endTimeFileTransfer = System.nanoTime();
+                                long timeElapsedFileTransfer = endTimeFileTransfer - startTimeFileTransfer;
+                                client1.shutdown();
+                                controller.sendUploadTime(timeElapsedFileTransfer/1000000, "0000003");
+                            }
+                        }
+                        if (isCondition2) {
+                            System.out.println(condition2 + " in the frame");
+                            if (!action2.equals("drop")) {
+                                chainMLClient client2 = new chainMLClient(action2, 50051);
+                                long startTimeFileTransfer = System.nanoTime();
+                                client2.uploadFile("image",bMap);
+                                long endTimeFileTransfer = System.nanoTime();
+                                long timeElapsedFileTransfer = endTimeFileTransfer - startTimeFileTransfer;
+                                client2.shutdown();
+                                controller.sendUploadTime(timeElapsedFileTransfer/1000000, "0000003");
+                            }
+                        }
+                        client.shutdown();
+                        controller.shutdown();
+
+                    }
+
+            } catch (InterruptedException interruptedException) {
+            interruptedException.printStackTrace();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
         }
-    }
+        }
+
 }
+
